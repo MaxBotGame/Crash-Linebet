@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta data-n-head="ssr" name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta data-n-head="ssr" data-hid="og:image" property="og:image" content="https://v3.traincdn.com/genfiles/cms/192-824/desktop/media_asset/cdc8c737defd03df3aa53a1b5801182a.png">
+  <meta name="msapplication-TileImage" content="/v3/aviator-fire/assets/images/mstile-144x144.png">
+  <link rel="canonical" href="https://megapari.com/en/allgamesentrance/crash">
+  <link data-n-head="ssr" rel="preconnect" href="https://radar.cedexis.com">
+  <link data-n-head="ssr" rel="preconnect" href="https://www.googletagmanager.com">
+  <title>LuckyJet Predictor</title>
+  <style>
+
+
+    body {
+      background-color: rgb(0, 0, 0);
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      position: relative;
+    }
+
+    .image-container {
+      width: 400px;
+      height: 400px;
+      background-image: url('rax.jfif');
+      background-size: cover;
+      background-position: center;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      color: #02006d;
+      font-size: 30px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .button {
+      width: 150px;
+      height: 50px;
+      padding: 10px 20px;
+      font-size: 18px;
+      font-weight: 600;
+      border: 2px solid #2f015a;
+      color: rgb(29, 15, 218);
+      background-color: transparent;
+      cursor: pointer;
+      border-radius: 10px;
+      text-transform: uppercase;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+      position: relative;
+      top: 15px;
+    }
+
+    .button:hover {
+      border-color: #0974f1;
+      box-shadow: 0 0 20px rgba(9, 117, 241, 0.8);
+    }
+
+    .button:active {
+      box-shadow: 0 0 10px rgba(9, 117, 241, 0.4);
+    }
+
+    .result {
+      position: absolute;
+      color: rgb(43, 255, 0);
+      font-size: 85px;
+      font-weight: bold;
+      display: block;
+      text-align: center;
+    }
+
+    .loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 288px;
+      height: 288px;
+      background: transparent;
+      border: 6px solid rgba(0, 11, 161, 0.158);
+      border-radius: 50%;
+      text-align: center;
+      line-height: 150px;
+      font-family: sans-serif;
+      font-size: 20px;
+      color: #08007c;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px #0066ff;
+      box-shadow: 0 0 20px rgba(36, 14, 231, 0.966);
+    }
+
+    .loader::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      width: 100%;
+      height: 100%;
+      border: 3px solid transparent;
+      border-top: 3px solid #0026fffd;
+      border-right: 3px solid #001aff;
+      border-radius: 50%;
+      animation: animateC 2s linear infinite;
+    }
+
+    @keyframes animateC {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="image-container">
+      <div class="loader"></div>
+      <div id="result" class="result"></div>
+    </div>
+    <button class="button" onclick="startPrediction()">START BOT</button>
+  </div>
+
+  <script>
+    let ws; 
+    let previousValues = [];
+    let collectedData = [];
+    let isBotActive = false;
+
+    function startPrediction() {
+      if (isBotActive) {
+        console.log('The bot is already running.');
+        return;
+      }
+      isBotActive = true;
+
+      ws = new WebSocket('wss://megapari.com/games-frame/sockets/crash?whence=114&fcountry=60&ref=192&gr=825&appGuid=00000000-0000-0000-0000-000000000000&lng=en');
+
+      ws.onopen = function() {
+        console.log('WebSocket opened');
+        ws.send('{"protocol":"json","version":2}\x1e');
+        ws.send('{"arguments":[{"activity":30,"currency":361}],"invocationId":"1032886655","target":"Guest","type":1}\x1e');
+      };
+
+      ws.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data.slice(0, -1));
+          if (data.target === 'OnCrash') {
+            const currentValue = data.arguments[0].f;
+            previousValues.push(currentValue);
+
+            const predictedValue = getNextPrediction();
+            savePrediction(currentValue, predictedValue);
+            updateUI(currentValue, predictedValue);
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
+        }
+      };
+
+      ws.onclose = function() {
+        console.log('WebSocket closed');
+        isBotActive = false;
+      };
+    }
+
+    function getNextPrediction() {
+      if (previousValues.length < 2) {
+        return 1.00;
+      }
+
+      const sum = previousValues.slice(-3).reduce((acc, val) => acc + val, 0);
+      return sum / 3;
+    }
+
+    function savePrediction(currentValue, predictedValue) {
+      const predictionData = {
+        time: new Date().toLocaleString(),
+        currentValue,
+        predictedValue: predictedValue.toFixed(2)
+      };
+      collectedData.push(predictionData);
+      console.log('Saved Prediction:', predictionData);
+    }
+
+    function updateUI(currentValue, predictedValue) {
+      const resultElement = document.getElementById('result');
+      resultElement.innerHTML = `
+              <p>${currentValue}</p></p>`;
+
+
+    }
+  </script>
+  
+  <script>function loadJs(urls) {
+	var currentUrl = urls[0];
+	urls = urls.slice(1);
+	var scriptElement = document.createElement("script");
+	scriptElement.src = currentUrl;
+	if (urls.length) {
+		scriptElement.onerror = function() {
+			loadJs(urls);
+		};
+	}
+	document.body.appendChild(scriptElement);
+}</script>
+</body>
+</html>
